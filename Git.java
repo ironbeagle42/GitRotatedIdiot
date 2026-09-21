@@ -1,9 +1,14 @@
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 public class Git {
     public static void main(String[] args) {
         init();
+        System.out.println((hash("hello world")));
     }
 
     public static void init() {
@@ -25,5 +30,20 @@ public class Git {
                 e.printStackTrace();
             }
         }
+    }
+
+    public static String hash(String input) {
+        byte[] input_bytes = input.getBytes();
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            md.update(input_bytes);
+            byte[] hashed_bytes = md.digest();
+            return Base64.getEncoder().encodeToString(hashed_bytes);
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return "";
+        }
+        
     }
 }
