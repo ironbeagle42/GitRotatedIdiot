@@ -1,9 +1,9 @@
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.io.FileWriter;
 
 public class Git {
     public static void main(String[] args) {
@@ -44,6 +44,16 @@ public class Git {
             e.printStackTrace();
             return "";
         }
-        
+    }
+
+    public static void blob(String file) {
+        String hashedFile = hash(file);
+        try {
+            FileWriter blobWriter = new FileWriter("git/objects/" + hashedFile);
+            blobWriter.write(file);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 }
