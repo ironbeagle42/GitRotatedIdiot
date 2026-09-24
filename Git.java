@@ -1,10 +1,14 @@
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.io.FileWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Git {
     public static void main(String[] args) {
@@ -49,20 +53,50 @@ public class Git {
 
     public static void blob(String filePath) {
         try {
-            FileReader blobReader = new FileReader(filePath);
+            String fileContents = getTextOfFile(filePath);
+            String hashedFile = hash(fileContents);
+            FileWriter blobWriter = new FileWriter("git/objects/" + hashedFile);
+            blobWriter.write(fileContents);
+            indexFile(filePath);
+            blobWriter.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    public static String getTextOfFile(String filePath) {
+        FileReader blobReader;
+        try {
+            blobReader = new FileReader(filePath);
             String fileContents = "";
             int c;
             while ((c = blobReader.read()) != -1) {
                 fileContents = fileContents + (char) c;
             }
-            String hashedFile = hash(fileContents);
-            FileWriter blobWriter = new FileWriter("git/objects/" + hashedFile);
-            blobWriter.write(fileContents);
-            FileWriter indexWriter = new FileWriter("git/INDEX");
-            indexWriter.write(hashedFile + " " + filePath);
-            indexWriter.close();
-            blobWriter.close();
             blobReader.close();
+            return fileContents;
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    public static void indexFile(String filePath) {
+        try {
+            BufferedReader indexReader = new BufferedReader(new FileReader("git/INDEX"));
+            String line;
+            List<String> indexLines = new ArrayList<>();
+            while ((line = indexReader.readLine()) != null) {
+                if (line.contains(" " + filePath)) {
+                    String hashedFile = hash(getTextOfFile(filePath));
+                    indexLines.add(hashedFile + " " + filePath);
+                } else {
+                    indexLines.add(line);
+                }
+            }
+            indexReader.close();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
