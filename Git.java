@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -8,13 +9,13 @@ import java.io.FileWriter;
 public class Git {
     public static void main(String[] args) {
         init();
-        System.out.println((hash("hello world")));
+        blob("helloworld.txt");
     }
 
     public static void init() {
         File a = new File("git/");
         File b = new File("git/objects/");
-        File c = new File("git/index");
+        File c = new File("git/INDEX");
         File d = new File("git/HEAD");
         if (!a.exists() && !b.exists() && !c.exists() && !d.exists()) {
             System.out.println("Git Repository Already Exists");
@@ -46,11 +47,22 @@ public class Git {
         }
     }
 
-    public static void blob(String file) {
-        String hashedFile = hash(file);
+    public static void blob(String filePath) {
         try {
+            FileReader blobReader = new FileReader(filePath);
+            String fileContents = "";
+            int c;
+            while ((c = blobReader.read()) != -1) {
+                fileContents = fileContents + (char) c;
+            }
+            String hashedFile = hash(fileContents);
             FileWriter blobWriter = new FileWriter("git/objects/" + hashedFile);
-            blobWriter.write(file);
+            blobWriter.write(fileContents);
+            FileWriter indexWriter = new FileWriter("git/INDEX");
+            indexWriter.write(hashedFile + " " + filePath);
+            indexWriter.close();
+            blobWriter.close();
+            blobReader.close();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
