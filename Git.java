@@ -96,6 +96,11 @@ public class Git {
                     indexLines.add(line);
                 }
             }
+            FileWriter indexWriter = new FileWriter("git/INDEX");
+            for (String i : indexLines) {
+                indexWriter.write(i + "\n");
+            }
+            indexWriter.close();
             indexReader.close();
         } catch (IOException e) {
             // TODO Auto-generated catch block
