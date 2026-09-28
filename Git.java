@@ -14,6 +14,7 @@ public class Git {
     public static void main(String[] args) {
         init();
         blob("helloworld.txt");
+        blob("heresthething.txt");
     }
 
     public static void init() {
@@ -87,14 +88,20 @@ public class Git {
         try {
             BufferedReader indexReader = new BufferedReader(new FileReader("git/INDEX"));
             String line;
+            boolean hasAdded = false;
             List<String> indexLines = new ArrayList<>();
             while ((line = indexReader.readLine()) != null) {
                 if (line.contains(" " + filePath)) {
                     String hashedFile = hash(getTextOfFile(filePath));
                     indexLines.add(hashedFile + " " + filePath);
+                    hasAdded = true;
                 } else {
                     indexLines.add(line);
                 }
+            }
+            if (!hasAdded) {
+                String hashedFile = hash(getTextOfFile(filePath));
+                indexLines.add(hashedFile + " " + filePath);
             }
             FileWriter indexWriter = new FileWriter("git/INDEX");
             for (String i : indexLines) {
