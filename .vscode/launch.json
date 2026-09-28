@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Git",
+      "request": "launch",
+      "mainClass": "Git",
+      "projectName": "GitRotatedIdiot_95d33b06",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
