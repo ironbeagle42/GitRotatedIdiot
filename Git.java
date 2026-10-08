@@ -25,6 +25,8 @@ public class Git {
         indexFile("./directory/folder/file3");
 
         System.out.println(treeIndex());
+
+        
     }
 
     public static void init() {
@@ -117,10 +119,10 @@ public class Git {
                 indexLines.add(hashedFile + " " + printName);
             }
             FileWriter indexWriter = new FileWriter("git/index");
-            for (int i = 0; i < indexLines.size()-1; i++) {
+            for (int i = 0; i < indexLines.size() - 1; i++) {
                 indexWriter.write(indexLines.get(i) + "\n");
             }
-            indexWriter.write(indexLines.get(indexLines.size()-1));
+            indexWriter.write(indexLines.get(indexLines.size() - 1));
             indexWriter.close();
             indexReader.close();
         } catch (IOException e) {
@@ -150,7 +152,7 @@ public class Git {
                 }
             }
             if (tree.endsWith("\n")) {
-                tree = tree.substring(0, tree.length()-1);
+                tree = tree.substring(0, tree.length() - 1);
             }
             String treeHash = hashString(tree);
             FileWriter fw = new FileWriter("./git/objects/" + treeHash);
@@ -165,20 +167,24 @@ public class Git {
 
     public static String treeIndex() {
         try {
-            ArrayList<String> indexArray = new ArrayList<>(Arrays.asList(getTextOfFile("./git/index").split("\n")));
-            
+            ArrayList<String> indexArray =
+                    new ArrayList<>(Arrays.asList(getTextOfFile("./git/index").split("\n")));
+
             for (int i = 0; i < indexArray.size(); i++) {
                 indexArray.set(i, "blob " + indexArray.get(i));
             }
             String index = "";
             String deepPath = "";
             String root = new File("..").getAbsoluteFile().getParentFile().getName();
-            
+
             while (!deepPath.equals(root)) {
                 deepPath = "";
                 for (String string : indexArray) {
-                    if ((deepPath.length() - deepPath.replace("/", "").length()) < (string.length() - string.replace("/", "").length())) {
-                        deepPath = new File(string.substring(string.indexOf(' ', string.indexOf(' ') + 1) + 1)).getParent();
+                    if ((deepPath.length() - deepPath.replace("/", "").length()) < (string.length()
+                            - string.replace("/", "").length())) {
+                        deepPath = new File(
+                                string.substring(string.indexOf(' ', string.indexOf(' ') + 1) + 1))
+                                        .getParent();
                     }
                 }
                 ArrayList<Integer> remove = new ArrayList<>();
@@ -190,7 +196,7 @@ public class Git {
                 index = String.join("\n", indexArray).strip();
                 indexArray.add("tree " + createTree(index, deepPath) + " " + deepPath);
                 for (int i = 0; i < remove.size(); i++) {
-                    indexArray.remove((int) remove.get(i)-i);
+                    indexArray.remove((int) remove.get(i) - i);
                 }
             }
             FileWriter fw = new FileWriter("./git/index");
