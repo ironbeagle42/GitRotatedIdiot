@@ -9,24 +9,19 @@ import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.nio.file.Path;
 
 public class Git {
     public static void main(String[] args) {
         init();
 
-        blob("./heresthething.txt");
-        blob("./directory/file1");
-        blob("./directory/folder/file2");
-        blob("./directory/folder/file3");
+        blob("./testing/Hello.txt");
+        indexFile("./testing/Hello.txt");
 
-        indexFile("./heresthething.txt");
-        indexFile("./directory/file1");
-        indexFile("./directory/folder/file2");
-        indexFile("./directory/folder/file3");
+        blob("./testing/World.txt");
+        indexFile("./testing/World.txt");
 
         System.out.println(treeIndex());
-
-        
     }
 
     public static void init() {
@@ -101,9 +96,17 @@ public class Git {
             BufferedReader indexReader = new BufferedReader(new FileReader("git/index"));
             String line;
             boolean hasAdded = false;
-            File parent = new File("..");
-            String parentName = parent.getAbsoluteFile().getParentFile().getName();
-            String printName = parentName + filePath.substring(1);
+
+            // fixed storing file name correctly
+            Path root = Path.of("").toAbsolutePath();
+            Path file = Path.of(filePath).toAbsolutePath();
+
+            if (!file.startsWith(root)) {
+                throw new IllegalArgumentException("File is outside the repository");
+            }
+
+            String printName = root.relativize(file).toString().replace(File.separatorChar, '/');
+
             List<String> indexLines = new ArrayList<>();
             while ((line = indexReader.readLine()) != null) {
                 if (line.contains(" " + printName)) {
@@ -175,9 +178,8 @@ public class Git {
             }
             String index = "";
             String deepPath = "";
-            String root = new File("..").getAbsoluteFile().getParentFile().getName();
 
-            while (!deepPath.equals(root)) {
+            while (true) {
                 deepPath = "";
                 for (String string : indexArray) {
                     if ((deepPath.length() - deepPath.replace("/", "").length()) < (string.length()
@@ -189,7 +191,17 @@ public class Git {
                 }
                 ArrayList<Integer> remove = new ArrayList<>();
                 for (int i = 0; i < indexArray.size(); i++) {
-                    if (indexArray.get(i).contains(deepPath)) {
+                    String path = indexArray.get(i).split(" ", 3)[2];
+
+                    // extract just parent directory
+                    int lastSlashIndex = path.lastIndexOf('/');
+                    String parent;
+                    if (lastSlashIndex < 0) {
+                        parent = "";
+                    } else {
+                        parent = path.substring(0, lastSlashIndex);
+                    }
+                    if (parent.equals(deepPath)) {
                         remove.add(i);
                     }
                 }
@@ -198,10 +210,12 @@ public class Git {
                 for (int i = 0; i < remove.size(); i++) {
                     indexArray.remove((int) remove.get(i) - i);
                 }
+
+                // loop end condition
+                if (deepPath.isEmpty()) {
+                    break;
+                }
             }
-            FileWriter fw = new FileWriter("./git/index");
-            fw.write(indexArray.get(0));
-            fw.close();
             return createTree(index, deepPath);
         } catch (Exception e) {
             e.printStackTrace();
