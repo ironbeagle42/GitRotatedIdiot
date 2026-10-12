@@ -15,11 +15,14 @@ public class Git {
     public static void main(String[] args) {
         init();
 
-        blob("./testing/Hello.txt");
-        indexFile("./testing/Hello.txt");
+        blob("./testing/hello.txt");
+        indexFile("./testing/hello.txt");
 
-        blob("./testing/World.txt");
-        indexFile("./testing/World.txt");
+        blob("./testing/world.txt");
+        indexFile("./testing/world.txt");
+
+        blob("./testing/subfolder/xyz.txt");
+        indexFile("./testing/subfolder/xyz.txt");
 
         System.out.println(treeIndex());
     }
