@@ -70,8 +70,8 @@ public class Git {
             String hashedFile = hashString(fileContents);
             FileWriter blobWriter = new FileWriter("git/objects/" + hashedFile);
             blobWriter.write(fileContents);
-            indexFile(filePath);
             blobWriter.close();
+            indexFile(filePath);
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -247,7 +247,7 @@ public class Git {
         commitString += "message: " + message + "\n\n";
 
         String commitHash = hashString(commitString);
-    
+
         // writing to HEAD
         try {
             Files.writeString(Path.of("git/objects", commitHash), commitString);
