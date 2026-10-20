@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class Git {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         init();
 
         blob("./testing/hello.txt");
@@ -27,6 +27,9 @@ public class Git {
         indexFile("./testing/subfolder/xyz.txt");
 
         System.out.println(treeIndex());
+
+        rebuildIndex(commit("demir", "hello"));
+
     }
 
     public static void init() {
@@ -162,6 +165,14 @@ public class Git {
             if (tree.endsWith("\n")) {
                 tree = tree.substring(0, tree.length() - 1);
             }
+
+            // added fix for consistent ordering; sort after finishing
+            if (!tree.isEmpty()) {
+                List<String> entries = new ArrayList<>(Arrays.asList(tree.split("\n")));
+                java.util.Collections.sort(entries);
+                tree = String.join("\n", entries);
+            }
+
             String treeHash = hashString(tree);
             FileWriter fw = new FileWriter("./git/objects/" + treeHash);
             fw.write(tree);
@@ -258,5 +269,49 @@ public class Git {
         }
 
         return commitHash;
+    }
+
+    public static void rebuildIndex(String commitHash) throws IOException {
+        // read a recorded commit
+        List<String> commitLines = Files.readAllLines(Path.of("git/objects", commitHash));
+
+        // check if commit is proper
+        if (commitLines.isEmpty() || !commitLines.get(0).startsWith("tree: ")) {
+            throw new IOException("commit missing root tree");
+        }
+
+        // get commit root hash
+        String rootTree = commitLines.get(0).substring(6).strip();
+
+        List<String> indexLines = new ArrayList<>();
+        loopThroughTreeAndCollectEntries(rootTree, "", indexLines);
+
+        Files.writeString(Path.of("git/index"), String.join("\n", indexLines));
+    }
+
+    private static void loopThroughTreeAndCollectEntries(String treeHash, String directory,
+            List<String> indexLines)
+            throws IOException {
+
+        List<String> treeLines = Files.readAllLines(Path.of("git/objects", treeHash));
+
+        for (String line : treeLines) {
+            // format: blob/tree hash name
+            String[] lineParts = line.split(" ", 3);
+
+            String type = lineParts[0];
+            String hash = lineParts[1];
+            String path = directory + lineParts[2];
+
+            // if its blob, add, if its tree, run recursively
+            if (type.equals("blob")) {
+                indexLines.add(hash + " " + path);
+            } else if (type.equals("tree")) {
+                loopThroughTreeAndCollectEntries(hash, path + "/", indexLines);
+            } else {
+                throw new IOException("weird entry type" + type);
+            }
+        }
+
     }
 }
