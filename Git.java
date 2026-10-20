@@ -4,11 +4,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class Git {
@@ -173,8 +175,7 @@ public class Git {
 
     public static String treeIndex() {
         try {
-            ArrayList<String> indexArray =
-                    new ArrayList<>(Arrays.asList(getTextOfFile("./git/index").split("\n")));
+            ArrayList<String> indexArray = new ArrayList<>(Arrays.asList(getTextOfFile("./git/index").split("\n")));
 
             for (int i = 0; i < indexArray.size(); i++) {
                 indexArray.set(i, "blob " + indexArray.get(i));
@@ -189,7 +190,7 @@ public class Git {
                             - string.replace("/", "").length())) {
                         deepPath = new File(
                                 string.substring(string.indexOf(' ', string.indexOf(' ') + 1) + 1))
-                                        .getParent();
+                                .getParent();
                     }
                 }
                 ArrayList<Integer> remove = new ArrayList<>();
@@ -224,5 +225,38 @@ public class Git {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public static String commit(String author, String message) throws IOException {
+        Path head = Path.of("git/HEAD");
+        String parent = Files.readString(head).strip();
+
+        // initialize root tree index, using existing method
+        String rootTree = treeIndex();
+        if (rootTree == null) {
+            throw new IOException("creating root tree failed");
+        }
+
+        // populate the commit BLOB
+        String commitString = "tree: " + rootTree + "\n";
+        if (!parent.isEmpty()) {
+            commitString += "parent: " + parent + "\n";
+        }
+        commitString += "author: " + author + "\n";
+        commitString += "date: " + Instant.now() + "\n";
+        commitString += "message: " + message + "\n\n";
+
+        String commitHash = hashString(commitString);
+    
+        // writing to HEAD
+        try {
+            Files.writeString(Path.of("git/objects", commitHash), commitString);
+            Files.writeString(head, commitHash);
+        } catch (IOException e) {
+            Files.writeString(head, parent); // if it fails we can restore HEAD
+            throw new IOException("commit file writing failed", e);
+        }
+
+        return commitHash;
     }
 }
