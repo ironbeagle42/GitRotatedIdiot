@@ -29,7 +29,6 @@ public class Git {
         System.out.println(treeIndex());
 
         rebuildIndex(commit("demir", "hello"));
-
     }
 
     public static void init() {
@@ -47,7 +46,6 @@ public class Git {
                 index.createNewFile();
                 head.createNewFile();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -61,7 +59,6 @@ public class Git {
             byte[] hashed_bytes = md.digest();
             return HexFormat.of().formatHex(hashed_bytes);
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return "";
         }
@@ -76,7 +73,6 @@ public class Git {
             blobWriter.close();
             indexFile(filePath);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -93,12 +89,12 @@ public class Git {
             blobReader.close();
             return fileContents;
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return "";
         }
     }
 
+    @SuppressWarnings("resource")
     public static void indexFile(String filePath) {
         try {
             BufferedReader indexReader = new BufferedReader(new FileReader("git/index"));
@@ -137,7 +133,6 @@ public class Git {
             indexWriter.close();
             indexReader.close();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -313,5 +308,59 @@ public class Git {
             }
         }
 
+    }
+
+    public static void checkout(String commitHash) throws IOException {
+        // collect all files from past commit into indexLines
+        List<String> commitLines = Files.readAllLines(Path.of("git/objects", commitHash));
+        if (commitLines.isEmpty() || !commitLines.get(0).startsWith("tree: ")) {
+            throw new IOException("commit missing root tree");
+        }
+        String rootTree = commitLines.get(0).substring(6).strip();
+        List<String> indexLines = new ArrayList<>();
+        loopThroughTreeAndCollectEntries(rootTree, "", indexLines);
+
+        // remove staged files that are not from this commit
+        // cross reference every line in old index with the new commit index
+        for (String oldLine : Files.readAllLines(Path.of("git/index"))) {
+            Path oldFilePath = Path.of(oldLine.split(" ", 2)[1]).normalize();
+            boolean inCommit = false;
+            for (String line : indexLines) {
+                Path commitFilePath = Path.of(line.split(" ", 2)[1]).normalize();
+                if (oldFilePath.equals(commitFilePath)) {
+                    inCommit = true;
+                    break;
+                }
+            }
+            if (!inCommit) {
+                Files.deleteIfExists(oldFilePath);
+            }
+        }
+
+        // fill in all the files that are saved by that commit
+        for (String line : indexLines) {
+            // each entry = blobHash, relativePath
+            // get the target file path
+            String[] parts = line.split(" ", 2);
+            String commitFilePath = parts[1];
+
+            // get the target file contents from blob
+            Path blobPath = Path.of("git/objects", parts[0]);
+            byte[] contents = Files.readAllBytes(blobPath);
+
+            // write target file
+            File commitFile = new File(commitFilePath);
+            if (commitFile.getParentFile() != null) {
+                commitFile.getParentFile().mkdirs();
+            }
+            Files.write(Path.of(commitFilePath), contents);
+        }
+
+        // TODO delete empty folders
+        // TODO make sure not staged files are protected
+
+        // replace the index with this snapshot then record the checked out commit
+        Files.writeString(Path.of("git/index"), String.join("\n", indexLines));
+        Files.writeString(Path.of("git/HEAD"), commitHash);
     }
 }

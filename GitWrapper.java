@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 public class GitWrapper {
 
@@ -64,6 +65,10 @@ public class GitWrapper {
      * @param commitHash The SHA1 hash of the commit to check out.
      */
     public void checkout(String commitHash) {
-
+        try {
+            Git.checkout(commitHash);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

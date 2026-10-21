@@ -8,3 +8,5 @@
 # Git.treeIndex() now works, creates trees from the files in the index and returns the root tree's hash
 # Git.commit() now works, saves a commit with its root tree and previous commit, updates HEAD, and returns the commit's hash
 # GitWrapper calls the existing Git methods using the method names from normal git
+# Git.rebuildIndex() now works, reads a commits trees and replaces the index with that snapshots file hashes and paths
+# Git.checkout() now works, restores a commits files, removes files that are no longer in the snapshot and updates the index and HEAD
