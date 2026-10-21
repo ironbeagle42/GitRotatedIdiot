@@ -15,20 +15,30 @@ import java.nio.file.Path;
 
 public class Git {
     public static void main(String[] args) throws IOException {
-        init();
+        GitWrapper git = new GitWrapper();
+        git.init();
 
-        blob("./testing/hello.txt");
-        indexFile("./testing/hello.txt");
+        Files.writeString(Path.of("a.txt"), "one");
+        git.add("a.txt");
+        String commitA = git.commit("Tester", "Commit A");
+        System.out.println("step 1 done");
 
-        blob("./testing/world.txt");
-        indexFile("./testing/world.txt");
+        Files.writeString(Path.of("a.txt"), "two");
+        Files.createDirectories(Path.of("docs"));
+        Files.writeString(Path.of("docs/b.txt"), "hello from B");
+        git.add("a.txt");
+        git.add("docs/b.txt");
+        String commitB = git.commit("Tester", "Commit B");
+        System.out.println("step 2 done");
 
-        blob("./testing/subfolder/xyz.txt");
-        indexFile("./testing/subfolder/xyz.txt");
+        Files.writeString(Path.of("scratch.txt"), "not staged");
+        System.out.println("step 3 done");
 
-        System.out.println(treeIndex());
+        git.checkout(commitA);
+        System.out.println("step 4 done");
 
-        rebuildIndex(commit("demir", "hello"));
+        git.checkout(commitB);
+        System.out.println("step 5 done");
     }
 
     public static void init() {
@@ -320,6 +330,25 @@ public class Git {
         List<String> indexLines = new ArrayList<>();
         loopThroughTreeAndCollectEntries(rootTree, "", indexLines);
 
+        ArrayList<Path> trackedPaths = new ArrayList<>();
+        for (String line : Files.readAllLines(Path.of("git/index"))) {
+            trackedPaths.add(Path.of(line.split(" ", 2)[1]).normalize());
+        }
+
+        for (String line : indexLines) {
+            Path target = Path.of(line.split(" ", 2)[1]).normalize();
+
+            if (Files.exists(target) && !trackedPaths.contains(target)) {
+                throw new IOException(
+                        "checkout overwrites an untracked file");
+            }
+
+            if (Files.isDirectory(target)) {
+                throw new IOException(
+                        "checkout overwrites an untracked folder");
+            }
+        }
+
         // remove staged files that are not from this commit
         // cross reference every line in old index with the new commit index
         for (String oldLine : Files.readAllLines(Path.of("git/index"))) {
@@ -334,6 +363,16 @@ public class Git {
             }
             if (!inCommit) {
                 Files.deleteIfExists(oldFilePath);
+
+                // delete empty parents
+                Path folder = oldFilePath.getParent();
+                while (folder != null && Files.isDirectory(folder)) {
+                    if (folder.toFile().list().length != 0) {
+                        break;
+                    }
+                    Files.delete(folder);
+                    folder = folder.getParent();
+                }
             }
         }
 
@@ -355,9 +394,6 @@ public class Git {
             }
             Files.write(Path.of(commitFilePath), contents);
         }
-
-        // TODO delete empty folders
-        // TODO make sure not staged files are protected
 
         // replace the index with this snapshot then record the checked out commit
         Files.writeString(Path.of("git/index"), String.join("\n", indexLines));
