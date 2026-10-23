@@ -16,45 +16,60 @@ import java.nio.file.Path;
 public class Git {
     public static void main(String[] args) throws IOException {
         GitWrapper git = new GitWrapper();
-        git.init();
+        // git.init();
 
-        Files.writeString(Path.of("a.txt"), "one");
-        git.add("a.txt");
-        String commitA = git.commit("Tester", "Commit A");
-        System.out.println("step 1 done");
+        // git.add("a.txt");
+        // git.commit("me", "commit a");
 
-        Files.writeString(Path.of("a.txt"), "two");
-        Files.createDirectories(Path.of("docs"));
-        Files.writeString(Path.of("docs/b.txt"), "hello from B");
-        git.add("a.txt");
-        git.add("docs/b.txt");
-        String commitB = git.commit("Tester", "Commit B");
-        System.out.println("step 2 done");
+        // branch("feature");
+        // checkoutBranch("feature");
+        // Files.writeString(Path.of("a.txt"), "two");
+        // git.add("a.txt");
+        // git.commit("me", "commit b");
+        checkoutBranch("main");
 
-        Files.writeString(Path.of("scratch.txt"), "not staged");
-        System.out.println("step 3 done");
+        // Files.writeString(Path.of("a.txt"), "one");
+        // git.add("a.txt");
+        // String commitA = git.commit("Tester", "Commit A");
+        // System.out.println("step 1 done");
 
-        git.checkout(commitA);
-        System.out.println("step 4 done");
+        // Files.writeString(Path.of("a.txt"), "two");
+        // Files.createDirectories(Path.of("docs"));
+        // Files.writeString(Path.of("docs/b.txt"), "hello from B");
+        // git.add("a.txt");
+        // git.add("docs/b.txt");
+        // String commitB = git.commit("Tester", "Commit B");
+        // System.out.println("step 2 done");
 
-        git.checkout(commitB);
-        System.out.println("step 5 done");
+        // Files.writeString(Path.of("scratch.txt"), "not staged");
+        // System.out.println("step 3 done");
+
+        // git.checkout(commitA);
+        // System.out.println("step 4 done");
+
+        // git.checkout(commitB);
+        // System.out.println("step 5 done");
     }
 
     public static void init() {
         File git = new File("git/");
         File obj = new File("git/objects/");
         File index = new File("git/index");
-        File head = new File("git/HEAD");
-        if (git.exists() && obj.exists() && index.exists() && head.exists()) {
+        File head = new File("git/head");
+        File refs = new File("git/refs");
+        File heads = new File("git/refs/heads");
+        if (git.exists() && obj.exists() && index.exists() && head.exists() && refs.exists()) {
             System.out.println("Git Repository Already Exists");
         } else {
             System.out.println("Git Repository Created");
             git.mkdir();
             obj.mkdir();
+            refs.mkdir();
+            heads.mkdir();
             try {
                 index.createNewFile();
                 head.createNewFile();
+                Files.writeString(Path.of("git/head"), "ref: refs/heads/main");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -245,7 +260,11 @@ public class Git {
 
     public static String commit(String author, String message) throws IOException {
         Path head = Path.of("git/HEAD");
-        String parent = Files.readString(head).strip();
+        String branch = Files.readString(head).split(" ")[1];
+        String parent = null;
+        if (Files.exists(Path.of(branch))) {
+            parent = Files.readString(Path.of(branch)).strip();
+        }
 
         // initialize root tree index, using existing method
         String rootTree = treeIndex();
@@ -255,7 +274,7 @@ public class Git {
 
         // populate the commit BLOB
         String commitString = "tree: " + rootTree + "\n";
-        if (!parent.isEmpty()) {
+        if (parent != null) {
             commitString += "parent: " + parent + "\n";
         }
         commitString += "author: " + author + "\n";
@@ -267,9 +286,13 @@ public class Git {
         // writing to HEAD
         try {
             Files.writeString(Path.of("git/objects", commitHash), commitString);
-            Files.writeString(head, commitHash);
+            if (parent == null) {
+                File main = new File("git/refs/heads/main");
+                main.createNewFile();
+            }
+            Files.writeString(Path.of("git/" + branch), commitHash);
         } catch (IOException e) {
-            Files.writeString(head, parent); // if it fails we can restore HEAD
+            // Files.writeString(head, "ref: " + branch); // if it fails we can restore HEAD
             throw new IOException("commit file writing failed", e);
         }
 
@@ -397,6 +420,24 @@ public class Git {
 
         // replace the index with this snapshot then record the checked out commit
         Files.writeString(Path.of("git/index"), String.join("\n", indexLines));
-        Files.writeString(Path.of("git/HEAD"), commitHash);
+        // Files.writeString(Path.of("git/HEAD"), commitHash);
+    }
+
+    public static void branch(String name) throws IOException {
+        BufferedReader headReader = new BufferedReader(new FileReader("git/head"));
+        String oldBranchPath = headReader.readLine().split(" ")[1];
+        headReader.close();
+        BufferedReader refsReader = new BufferedReader(new FileReader("git/" + oldBranchPath));
+        String commitHash = refsReader.readLine();
+        Files.writeString(Path.of("git/refs/heads/" + name), commitHash);
+        refsReader.close();
+
+    }
+
+    public static void checkoutBranch(String branchName) throws IOException {
+        BufferedReader refsReader = new BufferedReader(new FileReader("git/refs/heads/" + branchName));
+        checkout(refsReader.readLine());
+        refsReader.close();
+        Files.writeString(Path.of("git/head"), "ref: refs/heads/" + branchName);
     }
 }
